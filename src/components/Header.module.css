@@ -1,0 +1,215 @@
+/* ======== HEADER BASE (DESKTOP) ======== */
+.header {
+  max-width: 1200px;
+  margin: 5rem 0 0 10rem;
+  padding: 1.2rem 1.5rem;
+  justify-content: flex-start;
+  align-items: center;
+  height: 15rem;
+  width: 100%;
+  display: flex;
+  position: static;
+  top: 0;
+  left: 0;
+  background: transparent;
+}
+
+.profile {
+  font-weight: 600;
+  color: #fff;
+}
+
+h1 {
+  padding: 0 5rem 0 11rem;
+  color: #a4a4a4;
+}
+
+@media (max-width: 1500px) {
+  .header {
+    margin: 5rem 0 0 0;
+    padding: 0;
+    justify-content: flex-start;
+    align-items: center;
+    height: 15rem;
+    width: 100%;
+    display: flex;
+    background: transparent;
+  }
+
+  h1 {
+    margin: 0 0 0 12rem;
+    font-size: 3rem;
+    text-align: start;
+    flex: 1;
+    padding: 0;
+    color: #a4a4a4;
+  }
+}
+
+/* ===== BOTÓN HAMBURGUESA ===== */
+.hamburger {
+  display: none;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 14px;
+  cursor: pointer;
+  color: #ffffff;
+  background-color: #1a1f2e;
+  font-size: 3rem;
+  font-weight: bold;
+  z-index: 2000;
+  position: relative;
+}
+
+/* ======== RESPONSIVE (MÓVIL) ======== */
+@media (max-width: 768px) {
+  .header {
+    margin: 0;
+    padding: 1.2rem 1.5rem;
+    border-radius: 0 0 30px 30px;
+    background: rgba(26, 31, 46, 0.6);
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+    justify-content: center;
+    align-items: center;
+    height: 8rem;
+    position: fixed;
+    width: 100%;
+    z-index: 3000;
+    display: flex;
+    top: 0;
+    left: 0;
+  }
+
+  .header::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(
+      120deg,
+      rgba(255, 255, 255, 0.08),
+      rgba(255, 255, 255, 0.02)
+    );
+    pointer-events: none;
+  }
+
+  h1 {
+    margin: 0 0 0 3rem;
+    font-size: 2rem;
+    text-align: center;
+    flex: 1;
+    padding: 1.7rem 0 0 0;
+    color: #e8e8e8;
+  }
+
+  .hamburger {
+    position: fixed;
+    top: 1.6rem;
+    left: 1.6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 4.4rem;
+    height: 4.4rem;
+    border-radius: 50%;
+    background: rgba(26, 31, 46, 0.6);
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    color: rgba(255, 255, 255, 0.9);
+    cursor: pointer;
+    z-index: 3100;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .hamburger:active {
+    transform: scale(0.95);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  }
+}
+
+/* ========================================================= */
+/* ========== CAMPANA + POPUP (ELEGANTE Y LIGERA) =========== */
+/* ========================================================= */
+
+.rightSection {
+  margin-left: auto;
+  margin-right: 4rem;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* Campana minimal y responsive */
+.bellIcon {
+  width: 26px;        /* tamaño más pequeño */
+  height: 26px;
+  transition: fill 0.25s ease, opacity 0.2s ease;
+  opacity: 0.9;
+  cursor: pointer;
+}
+
+.bellIcon:hover {
+  opacity: 1;
+}
+
+/* Popup */
+.popup {
+  position: absolute;
+  top: 4.5rem;
+  right: 0;
+  width: 26rem;
+  padding: 1.8rem;
+  background: rgba(26, 31, 46, 0.85);
+  border-radius: 16px;
+  backdrop-filter: blur(12px) saturate(160%);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+  z-index: 9999;
+}
+
+.popupTitle {
+  font-size: 1.7rem;
+  font-weight: 600;
+  color: #e8e8e8;
+  margin-bottom: 1rem;
+}
+
+.noNotifications {
+  font-size: 1.3rem;
+  color: #bbb;
+}
+
+/* ===== RESPONSIVE CAMPANA ===== */
+@media (max-width: 768px) {
+  .rightSection {
+    margin-right: 1.8rem;
+    margin-top: 1rem;
+  }
+
+  .bellIcon {
+    width: 23px;
+    height: 23px;
+  }
+
+  .popup {
+    top: 3.5rem;
+    right: -1rem;
+    width: 22rem;
+    padding: 1.5rem;
+    border-radius: 14px;
+  }
+
+  .popupTitle {
+    font-size: 1.5rem;
+  }
+
+  .noNotifications {
+    font-size: 1.2rem;
+  }
+}

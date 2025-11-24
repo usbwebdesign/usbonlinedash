@@ -1,0 +1,176 @@
+/* CONTENEDOR PRINCIPAL */
+.container {
+  width: 470px;
+  margin: 150px auto;
+  text-align: center;
+  padding: 65px 70px;
+  border-radius: 25px; /* un poco más redondeado */
+  
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);        /* más difuso */
+  -webkit-backdrop-filter: blur(20px);
+  
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  
+  box-shadow: 
+    0 8px 16px rgba(0,0,0,0.12),
+    0 24px 48px rgba(0,0,0,0.08);     /* doble sombra más líquida */
+  
+  max-width: 90vw;
+
+  /* opcional: un ligero degradado para efecto líquido */
+  background: linear-gradient(
+    135deg, 
+    rgba(255,255,255,0.12) 0%, 
+    rgba(255,255,255,0.08) 100%
+  );
+
+  transition: all 0.3s ease-in-out; /* para animaciones suaves al hover */
+}
+
+.login {
+  font-size: 32px;
+  font-weight: 400;
+  text-align: center;
+  margin: 0 auto 25px auto;
+
+  /* Degradado suave */
+  background: linear-gradient(100deg, #ffffff, #167bff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+
+  /* Opcional: para Firefox */
+  background-clip: text;
+  color: transparent;
+}
+
+.caption{
+  font-size: 13px;
+  color: #c4c4c4;
+  margin: 1rem 0;
+  text-align: center;
+  font-weight: 400;
+}
+.instruction{
+  font-size: 10px;
+  color: #c0c0c0;
+  margin: 1rem 0 0 0;
+  text-align: start;
+  font-weight: 400;
+}
+
+/* FORMULARIO */
+.form {
+  margin-top: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+/* INPUTS */
+.input {
+  width: 100%;
+  padding: 14px 18px;       /* Más alto */
+  border-radius: 18px;
+
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.15);
+  /* backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px); */
+
+  color: #ffffff;
+  font-size: 14px;
+  outline: none;
+  transition: border 0.2s ease, background 0.2s ease;
+}
+
+.input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.input:focus {
+  border: 1px solid rgba(23, 71, 228, 0.7);
+  /* background: rgba(255, 255, 255, 0.35); */
+}
+
+/* ERROR */
+.error {
+  color: #ff6b6b;
+  font-size: 14px;
+  margin-top: -1px;
+  padding: 10px 0 0 0;
+}
+
+/* WRAPPER PASSWORD */
+.passwordWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* BOTÓN OJO */
+.eyeButton {
+  position: absolute;
+  right: 14px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.85);
+
+  transition: opacity 0.2s ease;
+}
+
+.eyeButton:hover {
+  opacity: 0.75;
+}
+
+.eyeButton:active {
+  opacity: 0.5;
+}
+
+/* BOTÓN PRINCIPAL */
+.button {
+  width: 100%;
+  padding: 15px;          /* Más alto */
+  border-radius: 30px;
+  border: none;
+  background: rgba(255, 255, 255, 0.963);
+  color: rgb(31, 31, 31);
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: 1.8rem;
+  transition: opacity 0.2s ease, transform 0.1s ease;
+}
+
+.button:hover:not(:disabled) {
+  opacity: 0.9;
+  /* transform: translateY(-1px); */
+}
+
+/* .button:active:not(:disabled) {
+  transform: translateY(1px);
+} */
+
+.button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* RESPONSIVE */
+@media (max-width: 480px) {
+  .container {
+    width: 90%;
+    padding: 40px 25px;
+  }
+
+  .input {
+    padding: 14px 16px;
+  }
+
+  .button {
+    padding: 13px;
+  }
+}

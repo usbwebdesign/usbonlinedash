@@ -1,0 +1,72 @@
+/* ===== SISTEMA GLOBAL DE ESTILOS ===== */
+
+/* Reset y normalización */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+html, body {
+  overflow-x: hidden;
+}
+/* Escala tipográfica base */
+html {
+  font-size: 62.5%; /* 1rem = 10px */
+  font-family: "Poppins", system-ui, -apple-system, sans-serif;
+  scroll-behavior: smooth;
+}
+
+
+/* Centramos el contenido en pantallas grandes */
+/* @media (min-width: 1200px) {
+  body {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+} */
+
+/* ===== VARIABLES ===== */
+:root {
+  /* Colores */
+  --color-bg: #081028;
+  --color-bg-alt: #ffffff;
+  --color-text: #213547;
+  --color-primary: #007bff;
+  --color-primary-dark: #0056b3;
+  --color-border: #e0e0e0;
+
+  /* Tipografía */
+  --font-size-base: 1.6rem;
+  --font-size-sm: 1.4rem;
+  --font-size-lg: 2rem;
+
+  /* Espaciado */
+  --space-xs: 0.4rem;
+  --space-sm: 0.8rem;
+  --space-md: 1.6rem;
+  --space-lg: 2.4rem;
+  --space-xl: 3.2rem;
+
+  /* Radios */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+}
+
+/* ===== ELEMENTOS BASE ===== */
+body {
+  font-size: var(--font-size-base);
+  line-height: 1.5;
+  background-color: var(--color-bg);
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+a:hover {
+  color: var(--color-primary-dark);
+}
