@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import styles from "./Login.module.css";
-import TopBar from "./Topbar"; // <-- importamos nuestro TopBar
+import TopBar from "./TopBar"; // <-- importamos nuestro TopBar
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState("");
