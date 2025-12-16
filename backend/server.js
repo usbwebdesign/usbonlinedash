@@ -2,255 +2,312 @@ import express from "express";
 import cors from "cors";
 import axios from "axios";
 import dotenv from "dotenv";
+import Bottleneck from "bottleneck";
 
 dotenv.config();
+
+/* =========================
+   CONFIGURACIÓN BASE
+========================= */
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 🌐 Ruta 1: Obtener todos los usuarios
-app.get("/api/users", async (req, res) => {
-  try {
-    const response = await axios.get("https://usbmexicoonline.neolms.com/api/v3/users?$limit=100", {
-      headers: {
-        "x-api-key": process.env.NEO_API_KEY, // 👈 este es el correcto según la doc
-        "Accept": "application/json",
-      },
-    });
+const PORT = process.env.PORT || 5000;
+const NEO_API = "https://usbmexicoonline.neolms.com/api/v3";
 
-    res.json(response.data);
+if (!process.env.NEO_API_KEY) {
+  console.error("❌ NEO_API_KEY no definida");
+}
 
-  } catch (error) {
-    console.error("❌ Error en la API:", error.message);
+/* =========================
+   RATE LIMIT (NEO)
+========================= */
 
-    if (error.response) {
-      console.log("🔎 Código:", error.response.status);
-      console.log("📄 Respuesta completa:", error.response.data);
-      res.status(error.response.status).json(error.response.data);
-    } else if (error.request) {
-      console.log("⚠️ No hubo respuesta del servidor NeoLMS");
-      res.status(500).json({ error: "Sin respuesta del servidor NeoLMS" });
-    } else {
-      console.log("💥 Error en la configuración:", error.message);
-      res.status(500).json({ error: error.message });
-    }
-  }
+const limiter = new Bottleneck({
+  minTime: 350,
+  maxConcurrent: 1,
 });
 
-
-// 🌐 Ruta 2: Obtener todos los estudiantes
-app.get("/api/students", async (req, res) => {
-  try {
-    const response = await axios.get("https://usbmexicoonline.neolms.com/api/v3/users?$filter={\"roles\":\"Student\"}&$limit=100", {
+const axiosLimited = (config) =>
+  limiter.schedule(() =>
+    axios({
+      ...config,
       headers: {
         "x-api-key": process.env.NEO_API_KEY,
-        "Accept": "application/json",
+        Accept: "application/json",
+        ...(config.headers || {}),
       },
-    });
+    })
+  );
 
-    res.json(response.data);
-  } catch (error) {
-    console.error("❌ Error en la API (Students):", error.message);
+/* =========================
+   CACHE SIMPLE
+========================= */
 
-    if (error.response) {
-      res.status(error.response.status).json(error.response.data);
-    } else {
-      res.status(500).json({ error: error.message });
-    }
+let cacheSesionesEstudiantes = null;
+let cacheSesionesEstudiantesTimestamp = 0;
+
+let cacheSesionesDocentes = null;
+let cacheSesionesDocentesTimestamp = 0;
+
+const CACHE_TTL = 5 * 60 * 1000;
+
+/* =========================
+   HELPERS
+========================= */
+
+const formatoFecha = (fecha) =>
+  fecha.toLocaleDateString("es-MX", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+
+const formatoHora = (fecha) =>
+  fecha.toLocaleTimeString("es-MX", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+
+function calcularDuracion(inicio, fin) {
+  if (!fin) return "En curso";
+  const duracionMin = Math.floor((fin - inicio) / 60000);
+  const h = Math.floor(duracionMin / 60);
+  const m = duracionMin % 60;
+  let txt = "";
+  if (h > 0) txt += `${h} hora${h > 1 ? "s" : ""}`;
+  if (m > 0) txt += `${h > 0 ? " y " : ""}${m} minuto${m > 1 ? "s" : ""}`;
+  return txt || "0 minutos";
+}
+
+/* =========================
+   RUTAS BÁSICAS
+========================= */
+
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok", uptime: process.uptime() });
+});
+
+app.get("/api/users", async (_, res) => {
+  try {
+    const r = await axiosLimited({ method: "GET", url: `${NEO_API}/users?$limit=100` });
+    res.json(r.data);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 });
 
-// 🌐 Ruta 3: Obtener todos los docentes
-app.get("/api/docentes", async (req, res) => {
+app.get("/api/students", async (_, res) => {
   try {
-    const response = await axios.get("https://usbmexicoonline.neolms.com/api/v3/users?$filter={\"roles\":\"Teacher\"}&$limit=100", {
-      headers: {
-        "x-api-key": process.env.NEO_API_KEY,
-        "Accept": "application/json",
-      },
+    const r = await axiosLimited({
+      method: "GET",
+      url: `${NEO_API}/users?$filter={"roles":"Student"}&$limit=100`,
     });
-
-    res.json(response.data);
-  } catch (error) {
-    console.error("❌ Error en la API (Docentes):", error.message);
-
-    if (error.response) {
-      res.status(error.response.status).json(error.response.data);
-    } else {
-      res.status(500).json({ error: error.message });
-    }
+    res.json(r.data);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 });
 
-
-
-// 🌐 Ruta 4: Obtener todas las clases activas
-app.get("/api/active-classes", async (req, res) => {
+app.get("/api/students/:id", async (req, res) => {
   try {
-    const response = await axios.get("https://usbmexicoonline.neolms.com/api/v3/classes?$filter={\"archived\":false}&$limit=100", {
-      headers: {
-        "x-api-key": process.env.NEO_API_KEY,
-        "Accept": "application/json",
-      },
+    const r = await axiosLimited({
+      method: "GET",
+      url: `${NEO_API}/users/${req.params.id}`,
     });
-
-    res.json(response.data);
-  } catch (error) {
-    console.error("❌ Error en la API (classes):", error.message);
-
-    if (error.response) {
-      res.status(error.response.status).json(error.response.data);
-    } else {
-      res.status(500).json({ error: error.message });
-    }
+    res.json(r.data);
+  } catch {
+    res.status(404).json({ error: "Estudiante no encontrado" });
   }
 });
 
-// 🌐 Ruta 5: Obtener todos los grupos
-app.get("/api/groups", async (req, res) => {
+app.get("/api/docentes", async (_, res) => {
   try {
-    const response = await axios.get("https://usbmexicoonline.neolms.com/api/v3/groups", {
-      headers: {
-        "x-api-key": process.env.NEO_API_KEY,
-        "Accept": "application/json",
-      },
+    const r = await axiosLimited({
+      method: "GET",
+      url: `${NEO_API}/users?$filter={"roles":"Teacher"}&$limit=100`,
     });
-
-    res.json(response.data);
-  } catch (error) {
-    console.error("❌ Error en la API (Gropus):", error.message);
-
-    if (error.response) {
-      res.status(error.response.status).json(error.response.data);
-    } else {
-      res.status(500).json({ error: error.message });
-    }
+    res.json(r.data);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 });
 
-
-//OBTENER LAS SESIONES DE LOS ESTUDIANTES
-
-app.get("/api/student-sessions", async (req, res) => {
+app.get("/api/groups", async (_, res) => {
   try {
-    // 1️⃣ Obtener lista de estudiantes
-    const usersResponse = await axios.get(
-      `https://usbmexicoonline.neolms.com/api/v3/users?$filter={"roles":"Student"}&$limit=100`,
-      {
-        headers: {
-          "x-api-key": process.env.NEO_API_KEY,
-          "Accept": "application/json",
-        },
-      }
-    );
+    const r = await axiosLimited({ method: "GET", url: `${NEO_API}/groups` });
+    res.json(r.data);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 
-    const estudiantes = usersResponse.data;
+app.get("/api/active-classes", async (_, res) => {
+  try {
+    const r = await axiosLimited({
+      method: "GET",
+      url: `${NEO_API}/classes?$filter={"archived":false}&$limit=100`,
+    });
+    res.json(r.data);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+/* =========================
+   SESIONES ESTUDIANTES
+========================= */
+
+app.get("/api/student-sessions", async (_, res) => {
+  const now = Date.now();
+  if (cacheSesionesEstudiantes && now - cacheSesionesEstudiantesTimestamp < CACHE_TTL) {
+    return res.json(cacheSesionesEstudiantes);
+  }
+
+  try {
+    const users = await axiosLimited({
+      method: "GET",
+      url: `${NEO_API}/users?$filter={"roles":"Student"}&$limit=100`,
+    });
+
     const resultados = [];
 
-    // 2️⃣ Recorrer los estudiantes uno por uno
-    for (let i = 0; i < estudiantes.length; i++) {
-      const est = estudiantes[i];
+    for (const u of users.data) {
+      const s = await axiosLimited({
+        method: "GET",
+        url: `${NEO_API}/users/${u.id}/sessions`,
+      });
 
-      // 3️⃣ Obtener las sesiones de ese estudiante
-      const sesionesResponse = await axios.get(
-        `https://usbmexicoonline.neolms.com/api/v3/users/${est.id}/sessions`,
-        {
-          headers: {
-            "x-api-key": process.env.NEO_API_KEY,
-            "Accept": "application/json",
-          },
-        }
-      );
-
-      const sesiones = sesionesResponse.data;
-
-      // 💬 4️⃣ Si tiene sesiones, mostramos la última formateada
-      if (sesiones.length > 0) {
-        const ultima = sesiones[sesiones.length - 1];
-
-        // ✅ Convertimos las fechas a objetos Date
-        const inicio = new Date(ultima.login_at);
-        const fin = new Date(ultima.logout_at);
-
-        // ✅ Formateamos fecha y hora en español (ej: 11/08/2025, 4:00 p. m.)
-        const formatoFecha = (fecha) =>
-          fecha.toLocaleDateString("es-MX", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-          });
-
-        const formatoHora = (fecha) =>
-          fecha.toLocaleTimeString("es-MX", {
-            hour: "numeric",
-            minute: "2-digit",
-            hour12: true,
-          });
-
-        // ✅ Calculamos duración en milisegundos → horas/minutos
-        const duracionMs = fin - inicio;
-        const duracionMin = Math.floor(duracionMs / 60000);
-        const horas = Math.floor(duracionMin / 60);
-        const minutos = duracionMin % 60;
-
-        let textoDuracion = "";
-        if (horas > 0) textoDuracion += `${horas} hora${horas > 1 ? "s" : ""}`;
-        if (minutos > 0)
-          textoDuracion += `${horas > 0 ? " y " : ""}${minutos} minuto${
-            minutos > 1 ? "s" : ""
-          }`;
-
-        // 🖨️ Mostrar en consola
-        console.log(`🧑 ${est.name}`);
-        console.log(
-          `🕓 Inicio sesión: ${formatoFecha(inicio)}, Hora: ${formatoHora(
-            inicio
-          )}`
-        );
-        console.log(
-          `🏁 Fin de la sesión: ${formatoFecha(fin)}, Hora: ${formatoHora(fin)}`
-        );
-        console.log(`⏱️ Duración de la sesión: ${textoDuracion}`);
-        console.log("------------------------------------------------------");
-
-        // Guardar también en el arreglo para el front
+      if (!s.data.length) {
         resultados.push({
-           nombre: `${est.first_name} ${est.last_name}`, // ✅ CORRECTO
-          id: est.id,
-          inicio: formatoFecha(inicio) + " " + formatoHora(inicio),
-          fin: formatoFecha(fin) + " " + formatoHora(fin),
-          duracion: textoDuracion,
-        });
-      } else {
-        console.log(`🧑 ${est.name} nunca ha iniciado sesión.`);
-        console.log("------------------------------------------------------");
-
-        resultados.push({
-           nombre: `${est.first_name} ${est.last_name}`, // ✅ CORRECTO
-          id: est.id,
+          id: u.id,
+          nombre: `${u.first_name} ${u.last_name}`,
           inicio: null,
           fin: null,
           duracion: "Sin sesión registrada",
         });
+        continue;
       }
+
+      const ultima = s.data[s.data.length - 1];
+      const inicio = new Date(ultima.login_at);
+      const fin = ultima.logout_at ? new Date(ultima.logout_at) : null;
+
+      resultados.push({
+        id: u.id,
+        nombre: `${u.first_name} ${u.last_name}`,
+        inicio: `${formatoFecha(inicio)} ${formatoHora(inicio)}`,
+        fin: fin ? `${formatoFecha(fin)} ${formatoHora(fin)}` : "Sesión activa",
+        duracion: calcularDuracion(inicio, fin),
+      });
     }
 
-    // 5️⃣ Enviar todos los resultados
+    cacheSesionesEstudiantes = resultados;
+    cacheSesionesEstudiantesTimestamp = Date.now();
     res.json(resultados);
-  } catch (error) {
-    console.error("Error al obtener sesiones:", error);
-    res.status(500).json({ error: "Error al obtener sesiones de estudiantes" });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 });
 
+/* =========================
+   SESIONES POR USUARIO
+========================= */
 
+app.get("/api/users/:id/sessions", async (req, res) => {
+  try {
+    const s = await axiosLimited({
+      method: "GET",
+      url: `${NEO_API}/users/${req.params.id}/sessions`,
+    });
 
+    if (!s.data.length) {
+      return res.json({ total_sesiones: 0, ultima_sesion: null });
+    }
 
+    const ultima = s.data[s.data.length - 1];
+    const inicio = new Date(ultima.login_at);
+    const fin = ultima.logout_at ? new Date(ultima.logout_at) : null;
 
+    res.json({
+      total_sesiones: s.data.length,
+      ultima_sesion: {
+        inicio: `${formatoFecha(inicio)} ${formatoHora(inicio)}`,
+        fin: fin ? `${formatoFecha(fin)} ${formatoHora(fin)}` : "Sesión activa",
+        duracion: calcularDuracion(inicio, fin),
+      },
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 
-//Iniciar el servidor
-const PORT = 5000;
-console.log("🔑 API KEY (desde .env):", process.env.NEO_API_KEY);
+/* =========================
+   CLASES ACTIVAS
+========================= */
 
-app.listen(PORT, () => console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`));
+app.get("/api/users/:id/active-classes", async (req, res) => {
+  try {
+    const classes = await axiosLimited({
+      method: "GET",
+      url: `${NEO_API}/users/${req.params.id}/class_students?$include=class`,
+    });
+
+    const active = classes.data
+      .filter((c) => c.class && !c.class.archived)
+      .map((c) => ({ class_id: c.class.id, class_name: c.class.name }));
+
+    res.json({
+      student_id: req.params.id,
+      active_classes_count: active.length,
+      active_classes: active,
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+/* =========================
+   ASSIGNMENTS
+========================= */
+
+app.get("/api/classes/:idClase/assignments", async (req, res) => {
+  try {
+    const r = await axiosLimited({
+      method: "GET",
+      url: `${NEO_API}/classes/${req.params.idClase}/assignments`,
+    });
+    res.json(r.data);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get("/api/assignment-grades/:id", async (req, res) => {
+  try {
+    const r = await axiosLimited({
+      method: "GET",
+      url: `${NEO_API}/users/${req.params.id}/assignment_grades`,
+    });
+
+    res.json({
+      totalTareas: r.data.length,
+      tareasCompletadas: r.data.filter((t) => !t.missing).length,
+      tareasFaltantes: r.data.filter((t) => t.missing).length,
+      detalles: r.data,
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+/* =========================
+   START SERVER
+========================= */
+
+app.listen(PORT, () => {
+  console.log(`🚀 Server listo en puerto ${PORT}`);
+});
